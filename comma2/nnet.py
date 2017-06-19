@@ -27,11 +27,10 @@ tf.app.flags.DEFINE_integer('batch_size', 100,
 
 home_dir = os.getenv('HOME')
 
-DIM = [data_proc.COMPR_SIZE[1], data_proc.COMPR_SIZE[0], 9]
+DIM = [data_proc.COMPR_SIZE[1], data_proc.COMPR_SIZE[0], 6]
 
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 10000
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 10000
-
 
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.0     # The decay to use for the moving average.

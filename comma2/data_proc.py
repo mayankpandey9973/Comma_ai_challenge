@@ -8,6 +8,7 @@
 import os
 import glob
 import io
+import cv2
 import numpy as np
 import pylab
 import imageio
@@ -77,50 +78,70 @@ def shuffle_in_unison(a, b):
 
 def make_train_input(images, labels, index, mean_images, sqrt_var, normalize = True):
     frame_used = (images[index:index + 3] - (mean_images if normalize else 0.0))/(sqrt_var if normalize else 1.0)
+    flows = [opticalFlowDense(frame_used[i], frame_used[i + 1]) for i in range(3 - 1)]
     #print(np.shape(frame_used))
-    frame_glue = np.zeros((COMPR_SIZE[1], COMPR_SIZE[0], 3*3))
+    frame_glue = np.zeros((COMPR_SIZE[1], COMPR_SIZE[0], (3 - 1)*3))
     #print("to compute axis 2 means")
-    for i in range(3):
-        frame_glue[:,:,i*3:i*3+3] = frame_used[i]
+    for i in range(2):
+        frame_glue[:,:,i*3:i*3+3] = flows[i]
     
     return frame_glue
-
-def lucas_kanade_np(im1, im2, win=2):
-    assert im1.shape == im2.shape
-    I_x = np.zeros(im1.shape)
-    I_y = np.zeros(im1.shape)
-    I_t = np.zeros(im1.shape)
-    I_x[1:-1, 1:-1] = (im1[1:-1, 2:] - im1[1:-1, :-2]) / 2
-    I_y[1:-1, 1:-1] = (im1[2:, 1:-1] - im1[:-2, 1:-1]) / 2
-    I_t[1:-1, 1:-1] = im1[1:-1, 1:-1] - im2[1:-1, 1:-1]
-    params = np.zeros(im1.shape + (5,)) #Ix2, Iy2, Ixy, Ixt, Iyt
-    params[..., 0] = I_x * I_x # I_x2
-    params[..., 1] = I_y * I_y # I_y2
-    params[..., 2] = I_x * I_y # I_xy
-    params[..., 3] = I_x * I_t # I_xt
-    params[..., 4] = I_y * I_t # I_yt
-    del I_x, I_y, I_t
-    cum_params = np.cumsum(np.cumsum(params, axis=0), axis=1)
-    del params
-    win_params = (cum_params[2 * win + 1:, 2 * win + 1:] -
-                  cum_params[2 * win + 1:, :-1 - 2 * win] -
-                  cum_params[:-1 - 2 * win, 2 * win + 1:] +
-                  cum_params[:-1 - 2 * win, :-1 - 2 * win])
-    del cum_params
-    op_flow = np.zeros(im1.shape + (2,))
-    det = win_params[...,0] * win_params[..., 1] - win_params[..., 2] **2
-    op_flow_x = np.where(det != 0,
-                         (win_params[..., 1] * win_params[..., 3] -
-                          win_params[..., 2] * win_params[..., 4]) / det,
-                         0)
-    op_flow_y = np.where(det != 0,
-                         (win_params[..., 0] * win_params[..., 4] -
-                          win_params[..., 2] * win_params[..., 3]) / det,
-                         0)
-    op_flow[win + 1: -1 - win, win + 1: -1 - win, 0] = op_flow_x[:-1, :-1]
-    op_flow[win + 1: -1 - win, win + 1: -1 - win, 1] = op_flow_y[:-1, :-1]
-    return op_flow
-
+def opticalFlowDense(image_current_arr, image_next_arr):
+    """
+    input: image_current, image_next (RGB images)
+    calculates optical flow magnitude and angle and places it into HSV image
+    * Set the saturation to the saturation value of image_next
+    * Set the hue to the angles returned from computing the flow params
+    * set the value to the magnitude returned from computing the flow params
+    * Convert from HSV to RGB and return RGB image with same size as original image
+    """
+    
+    image_current = Image.fromarray(image_current_arr)
+    image_next = Image.fromarray(image_next_arr)
+    
+    gray_current = cv2.cvtColor(image_current, cv2.COLOR_RGB2GRAY)
+    gray_next = cv2.cvtColor(image_next, cv2.COLOR_RGB2GRAY)
+    
+    
+    hsv = np.zeros((H, W, 3))
+    # set saturation
+    hsv[:,:,1] = cv2.cvtColor(image_next, cv2.COLOR_RGB2HSV)[:,:,1]
+ 
+    # Flow Parameters
+    #     flow_mat = cv2.CV_32FC2
+    flow_mat = None
+    image_scale = 0.5
+    nb_images = 1
+    win_size = 15
+    nb_iterations = 2
+    deg_expansion = 5
+    STD = 1.3
+    extra = 0
+    # obtain dense optical flow paramters
+    flow = cv2.calcOpticalFlowFarneback(gray_current, gray_next,  
+                                        flow_mat, 
+                                        image_scale, 
+                                        nb_images, 
+                                        win_size, 
+                                        nb_iterations, 
+                                        deg_expansion, 
+                                        STD, 
+                                        0)
+                                        
+        
+    # convert from cartesian to polar
+    mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])  
+        
+    # hue corresponds to direction
+    hsv[:,:,0] = ang * (180/ np.pi / 2)
+    
+    # value corresponds to magnitude
+    hsv[:,:,2] = cv2.normalize(mag,None,0,255,cv2.NORM_MINMAX)
+    
+    # convert HSV to int32's
+    hsv = np.asarray(hsv, dtype= np.float32)
+    rgb_flow = cv2.cvtColor(hsv,cv2.COLOR_HSV2RGB)
+    return np.fromarray(rgb_flow)
 
 def ram_inputs(data_dir, is_train):
    
