@@ -19,7 +19,7 @@ FLAGS = tf.app.flags.FLAGS
 home_dir = os.getenv('HOME')
 
 tf.app.flags.DEFINE_string('train_dir',
-	home_dir + '/comma_ai_logs/train_data',
+	home_dir + '/comma_ai_logs/train_data_small',
                            """Directory where to write event logs """
                            """and checkpoint.""")
 tf.app.flags.DEFINE_integer('max_epochs', 64*2+32 + 1,

@@ -19,9 +19,9 @@ from natsort import natsorted
 
 ROWS = 482
 COLS = 640
-COMPR_SIZE = (64 * 2, 48 * 2)
-#NUM_TRAIN_IMAGES = 20000
-NUM_TRAIN_IMAGES = 5000
+COMPR_SIZE = (64, 48)
+NUM_TRAIN_IMAGES = 15000
+#NUM_TRAIN_IMAGES = 20400
 
 def listdir_nohidden(path):
     return glob.glob(os.path.join(path, '*'))
@@ -76,16 +76,16 @@ def shuffle_in_unison(a, b):
     np.random.set_state(rng_state)
     np.random.shuffle(b)
 
-def make_train_input(images, labels, index, mean_images, sqrt_var, normalize = True):
-    frame_used = (images[index:index + 3] - (mean_images if normalize else 0.0))/(sqrt_var if normalize else 1.0)
+def make_train_input(images, labels, index, mean_images, sqrt_var, normalize = False):
+    frame_used = images[index:index + 3]
+#print(np.shape(frame_used))
     flows = [opticalFlowDense(frame_used[i], frame_used[i + 1]) for i in range(3 - 1)]
-    #print(np.shape(frame_used))
     frame_glue = np.zeros((COMPR_SIZE[1], COMPR_SIZE[0], (3 - 1)*3))
     #print("to compute axis 2 means")
     for i in range(2):
         frame_glue[:,:,i*3:i*3+3] = flows[i]
     
-    return frame_glue
+    return (frame_glue - np.mean(frame_glue)) / np.std(frame_glue)
 def opticalFlowDense(image_current_arr, image_next_arr):
     """
     input: image_current, image_next (RGB images)
@@ -95,15 +95,14 @@ def opticalFlowDense(image_current_arr, image_next_arr):
     * set the value to the magnitude returned from computing the flow params
     * Convert from HSV to RGB and return RGB image with same size as original image
     """
-    
-    image_current = Image.fromarray(image_current_arr)
-    image_next = Image.fromarray(image_next_arr)
+    image_current = image_current_arr #Image.fromarray(image_current_arr, 'RGB')
+    image_next = image_next_arr #Image.fromarray(image_next_arr, 'RGB')
     
     gray_current = cv2.cvtColor(image_current, cv2.COLOR_RGB2GRAY)
     gray_next = cv2.cvtColor(image_next, cv2.COLOR_RGB2GRAY)
     
     
-    hsv = np.zeros((H, W, 3))
+    hsv = np.zeros((COMPR_SIZE[1], COMPR_SIZE[0], 3))
     # set saturation
     hsv[:,:,1] = cv2.cvtColor(image_next, cv2.COLOR_RGB2HSV)[:,:,1]
  
@@ -141,7 +140,7 @@ def opticalFlowDense(image_current_arr, image_next_arr):
     # convert HSV to int32's
     hsv = np.asarray(hsv, dtype= np.float32)
     rgb_flow = cv2.cvtColor(hsv,cv2.COLOR_HSV2RGB)
-    return np.fromarray(rgb_flow)
+    return np.asarray(rgb_flow)
 
 def ram_inputs(data_dir, is_train):
    

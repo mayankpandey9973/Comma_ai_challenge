@@ -29,7 +29,7 @@ home_dir = os.getenv('HOME')
 
 DIM = [data_proc.COMPR_SIZE[1], data_proc.COMPR_SIZE[0], 6]
 
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 10000
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 5000
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 10000
 
 # Constants describing the training process.
@@ -122,6 +122,7 @@ def inference(images, is_train):
     pre_activation = tf.nn.bias_add(conv, biases)
     conv1 = tf.nn.relu(pre_activation, name=scope.name)
     conv1 = batchnorm(conv1, "conv1_bn", is_train)
+    conv1 = tf.nn.dropout(conv1, 0.7)
     _activation_summary(conv1)
 
   # pool1
@@ -142,6 +143,7 @@ def inference(images, is_train):
     pre_activation = tf.nn.bias_add(conv, biases)
     conv2 = tf.nn.relu(pre_activation, name=scope.name)
     conv2 = batchnorm(conv2, "conv2_bn", is_train)
+    conv2 = tf.nn.dropout(conv2, 0.7)
     _activation_summary(conv2)
 
   # norm2
@@ -161,6 +163,7 @@ def inference(images, is_train):
     weights = _variable_with_weight_decay('weights', shape=[32 * (DIM[0] / 4) * (DIM[1] / 4), 384], stddev=0.04, wd=WEIGHT_DECAY )
     biases = _variable_on_cpu('biases', [384], tf.constant_initializer(0.1))
     local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases, name=scope.name)
+    local3 = tf.nn.dropout(local3, 0.5)
     _activation_summary(local3)
 
   with tf.variable_scope('linear_end') as scope:
