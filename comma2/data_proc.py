@@ -152,7 +152,7 @@ def ram_inputs(data_dir, is_train):
     print("Label len type =", len(labels), type(labels[1]), labels[:20])
     data_images = np.asarray([make_train_input(images, labels, index, mean_images, sqrt_var, normalize = is_train) for index in range(NUM_TRAIN_IMAGES)])
 
-    data_labels = np.asarray([np.mean(labels[index:index + 10]) for index in range(NUM_TRAIN_IMAGES)])
+    data_labels = np.asarray([np.mean(labels[index:index + 3]) for index in range(NUM_TRAIN_IMAGES)])
     shuffle_in_unison(data_images, data_labels)
     
     print("data_labels", data_labels[:20])
@@ -175,6 +175,8 @@ def ram_inputs(data_dir, is_train):
 	'labels_pl': labels_pl,
 	'data_images': data_images,
 	'data_labels': data_labels,
+	'mean_images': mean_images
+	'sqrt_var': sqrt_var
     }
 
     return ret_val

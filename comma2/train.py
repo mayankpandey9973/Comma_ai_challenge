@@ -108,7 +108,7 @@ def train():
 
               
       if step % 1 == 0:
-        num_examples_per_step = FLAGS.batch_size
+	num_examples_per_step = FLAGS.batch_size
         examples_per_sec = num_examples_per_step / duration
         sec_per_batch = float(duration)
 
@@ -125,8 +125,21 @@ def train():
       if step % 100 == 0 or batcher.is_done():
         checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
         saver.save(sess, checkpoint_path, global_step=step)
-      if step % 300 == 0:
-	print("Here are some labels: %s" % str(batch_labs))
+	errs = []
+	for index in range(data_proc.NUM_TRAIN_IMAGES / 100, 20000 / 100):
+	    vbatch_im = np.asarray([data_proc.make_train_input(images, labels, i, inputs['mean_images'], inputs['sqrt_var']) for i in range(100 * index, 100 * (index + 1))])
+	    vbatch_lab = np.asarray([np.mean(labels[i:i + 3]) for i in range(100 * index, 100 * (index + 1))])
+	    feed_dict1 = {
+		inputs['images_pl']: vbatch_im,
+		inputs['labels_pl']: vbatch_lab
+	    }
+	    _, val_sdiff = sess.run([train_op, loss1], feed_dict=feed_dict1)
+	    errs.append(val_sdiff)
+	    print("just did %d - %d" % (index, index + 100))
+	print("validation error: %.2f" % (np.mean(errs))
+	    
+
+	
 
 
         

@@ -29,7 +29,7 @@ home_dir = os.getenv('HOME')
 
 DIM = [data_proc.COMPR_SIZE[1], data_proc.COMPR_SIZE[0], 6]
 
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 5000
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 15000
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 10000
 
 # Constants describing the training process.
